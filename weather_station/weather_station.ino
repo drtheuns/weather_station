@@ -138,11 +138,13 @@ JsonObject& getWeatherInformation()
 int determineIcon(const int weather_code)
 {
     // see https://openweathermap.org/weather-conditions
-}
-
-void showIconOnMatrix()
-{
-    // show icon
+    if (weather_code == 800)
+        return 0;
+    if (weather_code >= 500 && weather_code < 600)
+        return 1;
+    if (weather_code >= 600 && weather_code < 700)
+        return 2;
+    return -1;
 }
 
 void playTone()
@@ -163,12 +165,13 @@ void playTone()
 void handleEvent()
 {
     // Handle both motion and button pressed events here.
-
-    // Get the weather info
-    // Play a sound
-    // Show icon on LED matrix
     const JsonObject& weatherJson = getWeatherInformation();
-    /* playTone(); */
+    int icon = determineIcon(weatherJson["weather_code"]);
+    if (icon >= 0) {
+        drawShape(IMAGES[icon]);
+        if (weatherJson["sound"])
+            playTone();
+    }
 }
 
 void loop()
