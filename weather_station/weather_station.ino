@@ -38,7 +38,7 @@ byte max7219_reg_intensity   = 0x0a;
 byte max7219_reg_scanLimit   = 0x0b;
 byte max7219_reg_shutdown    = 0x0c;
 byte max7219_reg_displayTest = 0x0f;
-
+byte clearScreen [8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 void setup()
 {
     Serial.begin(115200);
@@ -184,6 +184,8 @@ void loop()
         // motion detected
         Serial.println("Motion detected");
         handleEvent();
+        delay(5000);
+        drawShape(clearScreen);
     }
 
     if (button_value == HIGH) {
