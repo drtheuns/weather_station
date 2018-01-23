@@ -1,7 +1,7 @@
 #ifndef ICONS_H
 #define ICONS_H
 
-const byte IMAGES[][8] = {
+ byte IMAGES[][8] = {
 {
   B10001001,
   B01000010,
@@ -30,6 +30,38 @@ const byte IMAGES[][8] = {
   B00010000,
   B00000000
 }};
-const int IMAGES_LEN = sizeof(IMAGES)/8;
+ int IMAGES_LEN = sizeof(IMAGES)/8;
+
+byte WIFI_STATES[][8] = {
+{
+  B00000000,
+  B00111100,
+  B01000010,
+  B10000001,
+  B00111100,
+  B01000010,
+  B00011000,
+  B00000000
+},{
+  B10000001,
+  B01000010,
+  B00100100,
+  B00011000,
+  B00011000,
+  B00100100,
+  B01000010,
+  B10000001
+},{
+  B00000000,
+  B00000000,
+  B00000001,
+  B00000010,
+  B00000100,
+  B10001000,
+  B01010000,
+  B00100000
+}};
+ int WIFI_STATES_LEN = sizeof(IMAGES)/8;
+
 
 #endif

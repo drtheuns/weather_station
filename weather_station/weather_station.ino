@@ -4,24 +4,22 @@
 #include "icons.h"
 
 // see https://wiki.wemos.cc/products:d1:d1_mini for GPIO pin values.
-const int motion_pin = 4;
-const int button_pin = 0;
-const int audio_pin = 15; // pin D8
+ int motion_pin = 4;
+ int audio_pin = 15;
 
 // digital pins for the LED matrix
-const int DIN = 13;
-const int CS = 12;
-const int CLK = 14;
+ int DIN = 13;
+ int CS = 12;
+ int CLK = 14;
 
-const char* ssid = "arduino";
-const char* password = "arduinotest";
+ char* ssid = "arduino";
+ char* password = "arduinotest";
 
-const char* url = "https://baran-it.com/wst/stations/1/getWeather";
+ char* url = "https://baran-it.com/wst/stations/1/getWeather";
 // sha1 fingerprint for HTTPS
-const char* fingerprint = "39 FC 06 60 1D 63 DB CC C1 12 BF A7 65 D2 59 40 4B 70 06 F1";
+ char* fingerprint = "39 FC 06 60 1D 63 DB CC C1 12 BF A7 65 D2 59 40 4B 70 06 F1";
 
-//const int notification_tone[15] = { 165, 165, 349, 784, 784, 349, 165, 73, 33, 33, 73, 165, 165, 73, 73 };
-const int notification_tone[50] = { 103, 839, 462, 336, 257, 269, 228, 929, 757, 499, 159, 988, 249, 671, 523, 165, 911, 470, 994, 883, 294, 290, 946, 337, 121, 526, 414, 250, 270, 854, 125, 354, 134, 653, 585, 295, 227, 406, 261, 919, 966, 481, 242, 36, 524, 356, 440, 37, 42, 841 };
+ int notification_tone[50] = { 103, 839, 462, 336, 257, 269, 228, 929, 757, 499, 159, 988, 249, 671, 523, 165, 911, 470, 994, 883, 294, 290, 946, 337, 121, 526, 414, 250, 270, 854, 125, 354, 134, 653, 585, 295, 227, 406, 261, 919, 966, 481, 242, 36, 524, 356, 440, 37, 42, 841 };
 
 // max7219 registers
 byte max7219_reg_noop        = 0x00;
@@ -38,7 +36,7 @@ byte max7219_reg_intensity   = 0x0a;
 byte max7219_reg_scanLimit   = 0x0b;
 byte max7219_reg_shutdown    = 0x0c;
 byte max7219_reg_displayTest = 0x0f;
-byte clearScreen [8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
 void setup()
 {
     Serial.begin(115200);
@@ -55,60 +53,92 @@ void setup()
     Serial.print("Connecting to ");
     Serial.println(ssid);
 
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-
     Serial.println("");
     Serial.println("Wifi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+    setupWifi();
+}
+
+/*
+ * This function will hang the arduino until it connects to the wifi network
+ * as specified by the `ssid` and `password` above. It will flash different
+ * icons based on the wifi status. (see `icons.h#WIFI_STATES`)
+ */
+void setupWifi()
+{
+    WiFi.mode(WIFI_STA); // Otherwise the chip would act as an access point
+    WiFi.begin(ssid, password);
+
+    bool wifi_state = false;
+    while (WiFi.status() != WL_CONNECTED) {
+        drawShape(WIFI_STATES[wifi_state]);
+        wifi_state = !wifi_state;
+        delay(500);
+        Serial.print(".");
+    }
+    clearScreen();
+
+    // Show a check icon for 0.5 seconds to show that wifi is connected.
+    drawShape(WIFI_STATES[2]);
+    delay(500);
+    clearScreen();
 }
 
 void putByte(byte data)
 {
-  byte i = 8;
-  byte mask;
-  while(i > 0)
-  {
-    mask = 0x01 << (i - 1);      // get bitmask
-    digitalWrite( CLK, LOW);   // tick
-    if (data & mask) digitalWrite(DIN, HIGH);
-    else             digitalWrite(DIN, LOW);
-    digitalWrite(CLK, HIGH);   // tock
-    --i;                         // move to lesser bit
-  }
+    byte i = 8;
+    byte mask;
+    while(i > 0)
+    {
+        mask = 0x01 << (i - 1);      // get bitmask
+        digitalWrite(CLK, LOW);   // tick
+        if (data & mask)
+            digitalWrite(DIN, HIGH);
+        else
+            digitalWrite(DIN, LOW);
+        digitalWrite(CLK, HIGH);   // tock
+        --i;
+    }
 }
 
-void maxSingle( byte reg, byte col)
+void maxSingle(byte reg, byte col)
 {
-    digitalWrite(CS, LOW);       // begin     
-    putByte(reg);                  // specify register
-    putByte(col);                  // put data
-    digitalWrite(CS,HIGH); 
+    digitalWrite(CS, LOW);
+    putByte(reg);
+    putByte(col);
+    digitalWrite(CS,HIGH);
+}
+
+void drawShape(byte shape[])
+{
+    for(int i = 1; i <= 8; i++) {
+        maxSingle(i, shape[i - 1]);
+    }
+}
+
+void clearScreen()
+{
+    byte clear[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    drawShape(clear);
 }
 
 void initMax7219()
 {
     //initiation of the max 7219
-    maxSingle(max7219_reg_scanLimit, 0x07);      
+    maxSingle(max7219_reg_scanLimit, 0x07);
     maxSingle(max7219_reg_decodeMode, 0x00);     // using an led matrix (not digits)
     maxSingle(max7219_reg_shutdown,   0x01);     // not in shutdown mode
     maxSingle(max7219_reg_displayTest, 0x00);    // no display test
-    for (int e = 1; e <= 8; e++) maxSingle(e,0); // empty registers, turn all LEDs off 
+    clearScreen();
     maxSingle(max7219_reg_intensity, 0x0f & 0x0f);  // the first 0x0f is the value you can set
 }
 
-void drawShape(const byte shape[]){
-    for(int i = 1; i <= 8; i++) {
-        maxSingle(i, shape[i]);
-    }
-}
-
+/*
+ * Performs an HTTP request to the weather (station) API.
+ * Returns either raw JSON String (to be parsed later,
+ * see `getWeatherInformation()`), or an empty String.
+ */
 String getJson()
 {
     Serial.print("Reading from ");
@@ -117,16 +147,23 @@ String getJson()
     HTTPClient client;
     client.begin(url, fingerprint);
     int httpCode = client.GET();
+    String payload = "";
 
     if (httpCode > 0) {
-        String payload = client.getString();
-        Serial.println(payload);
-        return payload;
+        Serial.println("reached success");
+        payload = client.getString();
     }
+    Serial.print("Payload: ");
+    Serial.println(payload);
+
     client.end();
-    return "";
+    return payload;
 }
 
+/*
+ * Get the weather information from the API and parse the json string
+ * into a usable object.
+ */
 JsonObject& getWeatherInformation()
 {
     StaticJsonBuffer<200> jsonBuffer;
@@ -135,7 +172,13 @@ JsonObject& getWeatherInformation()
     return root;
 }
 
-int determineIcon(const int weather_code)
+
+/*
+ * Determines which icon to use depending on the weather category from
+ * OpenWeatherMap. Returns an interger with the index to the icon in
+ * icon array (see `icons.h`)
+ */
+int determineIcon( int weather_code)
 {
     // see https://openweathermap.org/weather-conditions
     if (weather_code == 800)
@@ -149,11 +192,8 @@ int determineIcon(const int weather_code)
 
 void playTone()
 {
-    // play a tone.
-    /* Serial.println("Play a tone"); */
+    // Peshmerge's favorite tune, commented out for obvious reasons
     /* for (int i = 0; i < 50; i++) { */
-    /*     Serial.print("Tone: "); */
-    /*     Serial.println(notification_tone[i]); */
     /*     tone(audio_pin, notification_tone[i], 150); */
     /*     delay(150); */
     /* } */
@@ -161,11 +201,12 @@ void playTone()
     delay(150);
 }
 
-// should the event type be sent to this function (e.g. motion vs button event)?
+/*
+ * Handle the actual "motion" event. Mainly to keep `loop()` clean.
+ */
 void handleEvent()
 {
-    // Handle both motion and button pressed events here.
-    const JsonObject& weatherJson = getWeatherInformation();
+    JsonObject& weatherJson = getWeatherInformation();
     int icon = determineIcon(weatherJson["weather_code"]);
     if (icon >= 0) {
         drawShape(IMAGES[icon]);
@@ -176,22 +217,17 @@ void handleEvent()
 
 void loop()
 {
-    int motion_value = digitalRead(motion_pin);
-    int button_value = digitalRead(button_pin);
+    if (WiFi.status() != WL_CONNECTED) {
+        setupWifi();
+    }
 
-    // if both handle events are the same, they could be in the same `if`.
+    int motion_value = digitalRead(motion_pin);
+
     if (motion_value == HIGH) {
-        // motion detected
         Serial.println("Motion detected");
         handleEvent();
         delay(5000);
-        drawShape(clearScreen);
+        clearScreen();
     }
-
-    if (button_value == HIGH) {
-        // button pressed
-    }
-
-    // should delay be longer when motion is detected to avoid multiple checks?
     delay(100);
 }
